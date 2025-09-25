@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>決戰！五子棋</title>
+<style>
+#header {
+text-align: center;
+font-size: 32px;
+color: #b22222;
+margin: 20px 0;
+text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+}
+#rules {
+max-width: 600px;
+margin: 20px auto;
+padding: 15px;
+background: #fff;
+border-radius: 8px;
+box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+body {
+display: flex;
+flex-direction: column;
+align-items: center;
+font-family: "Microsoft JhengHei", Arial, sans-serif;
+background: #f0f0f0;
+margin: 0;
+padding: 10px;
+}
+#board {
+border-collapse: collapse;
+background: #e6a23c; /* 棋盤顏色調深 */
+margin: 10px auto;
+box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+td {
+width: 50px;
+height: 50px;
+border: 1px solid #8b4513;
+text-align: center;
+font-size: 18px;
+font-weight: bold;
+color: #333;
+position: relative;
+cursor: pointer;
+}
+.black {
+position: relative;
+}
+.black::after {
+content: '';
+width: 36px;
+height: 36px;
+border-radius: 50%;
+background: #000;
+position: absolute;
+top: 50%;
+left: 50%;
+transform: translate(-50%, -50%);
+z-index: 2;
+}
+.white {
+position: relative;
+}
+.white::after {
+content: '';
+width: 36px;
+height: 36px;
+border-radius: 50%;
+background: #fff;
+box-shadow: 0 0 5px rgba(0,0,0,0.3);
+position: absolute;
+top: 50%;
+left: 50%;
+transform: translate(-50%, -50%);
+z-index: 2;
+}
+.move-number {
+position: absolute;
+top: 50%;
+left: 50%;
+transform: translate(-50%, -50%);
+font-size: 12px;
+z-index: 3;
+}
+.black .move-number { color: white; }
+.white .move-number { color: black; }
+.mark::before {
+content: '';
+width: 12px;
+height: 12px;
+border-radius: 50%;
+background: #ff0000;
+position: absolute;
+top: 4px;
+right: 4px;
+z-index: 3;
+box-shadow: 0 0 3px white;
+border: 2px solid white;
+}
+.preview::after {
+content: '';
+width: 36px;
+height: 36px;
+border: 3px solid rgba(33, 150, 243, 0.8);
+border-radius: 50%;
+position: absolute;
+top: 50%;
+left: 50%;
+transform: translate(-50%, -50%);
+z-index: 1;
+animation: pulse 1.5s infinite;
+box-shadow: 0 0 8px rgba(33, 150, 243, 0.5);
+}
+@keyframes pulse {
+0% {
+transform: translate(-50%, -50%) scale(0.9);
+opacity: 0.8;
+}
+50% {
+transform: translate(-50%, -50%) scale(1.15);
+opacity: 1;
+}
+100% {
+transform: translate(-50%, -50%) scale(0.9);
+opacity: 0.8;
+}
+}
+#status {
+font-size: 24px;
+margin: 10px;
+color: #333;
+}
+#controls {
+display: flex;
+gap: 15px;
+margin-bottom: 15px;
+flex-wrap: wrap;
+justify-content: center;
+}
+#controls button {
+padding: 12px 24px;
+font-size: 18px;
+cursor: pointer;
+color: white;
+border: none;
+border-radius: 6px;
+transition: opacity 0.3s;
+}
+#controls button.undo {
+background: #ff4444;
+}
+#controls button.reset {
+background: #2196F3;
+}
+#markToggle {
+background: #ff0000;
+}
+#forbiddenToggle {
+background: #3f51b5;
+}
+#timerToggle {
+background: #4CAF50;
+}
+#pauseResumeTimer {
+background: #FF9800;
+}
+/* 計時器樣式 */
+#timer-container {
+display: flex;
+gap: 30px;
+margin: 15px 0;
+align-items: center;
+}
+.timer-box {
+background: white;
+border-radius: 10px;
+padding: 15px 20px;
+box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+text-align: center;
+min-width: 120px;
+}
+.timer-label {
+font-size: 16px;
+font-weight: bold;
+margin-bottom: 5px;
+}
+.timer-time {
+font-size: 24px;
+font-weight: bold;
+font-family: 'Courier New', monospace;
+}
+.black-timer .timer-label { color: #000; }
+.white-timer .timer-label { color: #666; }
+.black-timer.active { border: 3px solid #000; }
+.white-timer.active { border: 3px solid #666; }
+.timer-low { color: #ff0000 !important; }
+/* 炸彈樣式 */
+.forbidden::before {
+content: '💣';
+font-size: 30px;
+position: absolute;
+top: 50%;
+left: 50%;
+transform: translate(-50%, -50%);
+z-index: 4;
+animation: bomb-pulse 1s infinite;
+filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.3));
+}
+@keyframes bomb-pulse {
+0% {
+transform: translate(-50%, -50%) scale(1);
+}
+50% {
+transform: translate(-50%, -50%) scale(1.2);
+}
+100% {
+transform: translate(-50%, -50%) scale(1);
+}
+}
+/* 禁手棋子樣式 - 半透明黑棋 */
+.forbidden-stone::after {
+content: '';
+width: 36px;
+height: 36px;
+border-radius: 50%;
+background: rgba(0, 0, 0, 0.4); /* 半透明黑色 */
+position: absolute;
+top: 50%;
+left: 50%;
+transform: translate(-50%, -50%);
+z-index: 2;
+border: 2px solid rgba(255, 0, 0, 0.8); /* 紅色邊框 */
+}
+.forbidden-stone .move-number {
+color: rgba(255, 255, 255, 0.8);
+}
+button:hover {
+opacity: 0.8;
+}
+@media (max-width: 600px) {
+td {
+width: 30px;
+height: 30px;
+font-size: 14px;
+}
+.black::after, .white::after {
+width: 22px;
+height: 22px;
+}
+.preview::after {
+width: 22px;
+height: 22px;
+border-width: 2px;
+box-shadow: 0 0 5px rgba(33, 150, 243, 0.5);
+}
+.mark::before {
+width: 8px;
+height: 8px;
+top: 3px;
+right: 3px;
+}
+.move-number {
+font-size: 10px;
+}
+#status {
+font-size: 20px;
+}
+button {
+padding: 10px 20px;
+font-size: 16px;
+}
+.forbidden::before {
+font-size: 20px;
+}
+.forbidden-stone::after {
+width: 22px;
+height: 22px;
+}
+#timer-container {
+gap: 15px;
+}
+.timer-box {
+padding: 10px 15px;
+min-width: 100px;
+}
+.timer-time {
+font-size: 18px;
+}
+}
+/* 新增的連線高亮和煙火效果樣式 */
+.winning-stone::after {
+box-shadow: 0 0 10px 5px gold !important;
+animation: pulse-win 1s infinite !important;
+}
+@keyframes pulse-win {
+0% {
+transform: translate(-50%, -50%) scale(0.9);
+box-shadow: 0 0 10px 5px gold;
+}
+50% {
+transform: translate(-50%, -50%) scale(1.1);
+box-shadow: 0 0 15px 8px gold;
+}
+100% {
+transform: translate(-50%, -50%) scale(0.9);
+box-shadow: 0 0 10px 5px gold;
+}
+}
+.firecracker-container {
+position: fixed;
+top: 0;
+left: 0;
+width: 100%;
+height: 100%;
+pointer-events: none;
+z-index: 1000;
+}
+.firecracker-particle {
+position: absolute;
+width: 8px;
+height: 8px;
+border-radius: 50%;
+animation: firecracker 1.5s ease-out forwards;
+}
+@keyframes firecracker {
+0% {
+transform: translate(0, 0) scale(0);
+opacity: 1;
+}
+100% {
+transform: translate(var(--x), var(--y)) scale(1.5);
+opacity: 0;
+}
+}
+/* 爆炸特效樣式 */
+.explosion-container {
+position: fixed;
+top: 0;
+left: 0;
+width: 100%;
+height: 100%;
+pointer-events: none;
+z-index: 1000;
+}
+.explosion-particle {
+position: absolute;
+width: 6px;
+height: 6px;
+border-radius: 50%;
+animation: explosion 1s ease-out forwards;
+}
+@keyframes explosion {
+0% {
+transform: translate(0, 0) scale(1);
+opacity: 1;
+}
+50% {
+transform: translate(var(--x), var(--y)) scale(1.5);
+opacity: 0.8;
+}
+100% {
+transform: translate(var(--x), var(--y)) scale(0);
+opacity: 0;
+}
+}
+.explosion-flash {
+position: fixed;
+top: 0;
+left: 0;
+width: 100%;
+height: 100%;
+background: rgba(255, 255, 255, 0.8);
+pointer-events: none;
+z-index: 999;
+animation: flash 0.3s ease-out;
+}
+@keyframes flash {
+0% { opacity: 0; }
+50% { opacity: 1; }
+100% { opacity: 0; }
+}
+</style>
+</head>
+<body>
+<h1 id="header">決戰！明智五子棋！</h1>
+<div id="status">黑棋回合</div>
+
+<!-- 計時器容器 -->
+<div id="timer-container" style="display: none;">
+<div class="timer-box black-timer active" id="blackTimer">
+<div class="timer-label">黑棋時間</div>
+<div class="timer-time" id="blackTime">5:00</div>
+</div>
+<div class="timer-box white-timer" id="whiteTimer">
+<div class="timer-label">白棋時間</div>
+<div class="timer-time" id="whiteTime">5:00</div>
+</div>
+</div>
+
+<div id="controls">
+<button class="undo" onclick="undoMove()">悔棋</button>
+<button class="reset" onclick="resetGame()">新遊戲</button>
+<button id="markToggle" onclick="toggleMarking()">開啟註記</button>
+<button id="forbiddenToggle" onclick="toggleForbiddenDetection()">開啟禁手檢測</button>
+<button id="timerToggle" onclick="toggleTimer()">開啟計時</button>
+<button id="pauseResumeTimer" onclick="togglePauseTimer()" style="display: none;">暫停計時</button>
+</div>
+<table id="board"></table>
+<div id="rules">
+<h3>遊戲規則：</h3>
+<ul>
+<li>🎪 燈牌排隊連線</li>
+<li>💎 贊助50 插隊&復活</li>
+<li>🎤 贏主播隨機表演才藝</li>
+<li>🚫禁止偷偷使用AI代下</li>
+<li>⚫ 黑棋禁手：（下了就算輸，可禁可不禁）
+<ul><li>禁止雙活三（同時形成兩個活三）</li>
+<li>禁止雙四（同時形成兩個四）</li>
+<li>禁止長連（超過五子連線）</li>
+</ul>
+</li>
+<li>⚪ 白棋無任何限制</li>
+<li>⏳合計下滿100手自動合棋</li>
+<li>⏰ 每人思考時間5分鐘，每手+3秒，時間耗盡直接落敗</li>
+</ul>
+</div>
+<script>
+const BOARD_SIZE = 15;
+let currentPlayer = 1;
+let boardData = Array(BOARD_SIZE).fill().map(() => Array(BOARD_SIZE).fill(0));
+let moveHistory = [];
+let stepNumber = 1;
+let isMarking = false;
+let isForbiddenDetectionEnabled = false;
+let prePlacePosition = null;
+let numberMatrix = generateSpiralMatrix(BOARD_SIZE);
+let gameOver = false;
+
+// 計時器相關變數
+let isTimerEnabled = false;
+let isPaused = false;
+let blackTimeRemaining = 300; // 5分鐘 = 300秒
+let whiteTimeRemaining = 300; // 5分鐘 = 300秒
+let timerInterval = null;
+
+// Audio context for sound generation
+let audioContext;
+
+// 初始化音頻上下文
+function initAudioContext() {
+if (!audioContext) {
+audioContext = new (window.AudioContext || window.webkitAudioContext)();
+}
+}
+
+// 生成下棋聲音
+function playMoveSound() {
+initAudioContext();
+const oscillator = audioContext.createOscillator();
+const gainNode = audioContext.createGain();
+const noiseBuffer = audioContext.createBuffer(1, audioContext.sampleRate * 0.1,
+audioContext.sampleRate);
+const noiseData = noiseBuffer.getChannelData(0);
+// 生成白噪音
+for (let i = 0; i < noiseData.length; i++) {
+noiseData[i] = (Math.random() * 2 - 1) * 0.3;
+}
+const noiseSource = audioContext.createBufferSource();
+noiseSource.buffer = noiseBuffer;
+const filter = audioContext.createBiquadFilter();
+filter.type = 'highpass';
+filter.frequency.value = 800;
+// 設置音量包絡
+gainNode.gain.setValueAtTime(0.8, audioContext.currentTime);
+gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.08);
+noiseSource.connect(filter);
+filter.connect(gainNode);
+gainNode.connect(audioContext.destination);
+noiseSource.start();
+noiseSource.stop(audioContext.currentTime + 0.08);
+}
+
+// 生成勝利音效（慶祝音樂）
+function playVictorySound() {
+initAudioContext();
+const duration = 2;
+const buffer = audioContext.createBuffer(1, audioContext.sampleRate * duration, audioContext.sampleRate);
+const data = buffer.getChannelData(0);
+
+// 生成勝利旋律
+for (let i = 0; i < data.length; i++) {
+const time = i / audioContext.sampleRate;
+// 主旋律（C大調音階上行）
+const frequencies = [523.25, 587.33, 659.25, 698.46, 783.99]; // C5, D5, E5, F5, G5
+const noteIndex = Math.floor(time * 5) % frequencies.length;
+const freq = frequencies[noteIndex];
+// 生成音符
+const noteValue = Math.sin(time * freq * 2 * Math.PI) * 0.3;
+// 加入和聲
+const harmonyValue = Math.sin(time * freq * 1.5 * 2 * Math.PI) * 0.15;
+// 包絡線
+const envelope = Math.exp(-time * 0.8);
+data[i] = (noteValue + harmonyValue) * envelope;
+}
+
+const source = audioContext.createBufferSource();
+source.buffer = buffer;
+const gainNode = audioContext.createGain();
+gainNode.gain.setValueAtTime(0.6, audioContext.currentTime);
+gainNode.gain.exponentialRampToValueAtTime(0.1, audioContext.currentTime + duration);
+source.connect(gainNode);
+gainNode.connect(audioContext.destination);
+source.start();
+}
+
+// 生成地雷爆炸聲音（加強版）
+function playExplosionSound() {
+initAudioContext();
+const duration = 1.2;
+const buffer = audioContext.createBuffer(1, audioContext.sampleRate * duration, audioContext.sampleRate);
+const data = buffer.getChannelData(0);
+
+// 生成強烈的爆炸聲音
+for (let i = 0; i < data.length; i++) {
+const time = i / audioContext.sampleRate;
+const decay = Math.exp(-time * 3);
+// 低頻爆炸聲（像地雷一樣的轟隆聲）
+const lowFreqNoise = (Math.random() * 2 - 1) * decay * 1.2;
+// 高頻破碎聲
+const highFreqNoise = (Math.random() * 2 - 1) * decay * 0.8 * Math.exp(-time * 8);
+// 衝擊波效果（低頻震動）
+const shockWave = Math.sin(time * 40 * (1 - time * 0.5)) * decay * 0.6;
+data[i] = (lowFreqNoise + highFreqNoise + shockWave);
+}
+
+const source = audioContext.createBufferSource();
+source.buffer = buffer;
+const filter = audioContext.createBiquadFilter();
+filter.type = 'lowpass';
+filter.frequency.value = 200; // 更低頻，更有地雷爆炸的感覺
+const gainNode = audioContext.createGain();
+gainNode.gain.setValueAtTime(2.0, audioContext.currentTime); // 大幅增加音量
+gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
+source.connect(filter);
+filter.connect(gainNode);
+gainNode.connect(audioContext.destination);
+source.start();
+}
+
+// 計時器相關函數
+function toggleTimer() {
+isTimerEnabled = !isTimerEnabled;
+const button = document.getElementById('timerToggle');
+const timerContainer = document.getElementById('timer-container');
+const pauseButton = document.getElementById('pauseResumeTimer');
+if (isTimerEnabled) {
+button.textContent = '關閉計時';
+timerContainer.style.display = 'flex';
+pauseButton.style.display = 'inline-block';
+startTimer();
+} else {
+button.textContent = '開啟計時';
+timerContainer.style.display = 'none';
+pauseButton.style.display = 'none';
+stopTimer();
+}
+}
+
+function togglePauseTimer() {
+if (!isTimerEnabled) return;
+isPaused = !isPaused;
+const button = document.getElementById('pauseResumeTimer');
+if (isPaused) {
+button.textContent = '繼續計時';
+stopTimer();
+} else {
+button.textContent = '暫停計時';
+startTimer();
+}
+}
+
+function startTimer() {
+if (timerInterval) clearInterval(timerInterval);
+timerInterval = setInterval(updateTimer, 1000);
+}
+
+function stopTimer() {
+if (timerInterval) {
+clearInterval(timerInterval);
+timerInterval = null;
+}
+}
+
+function updateTimer() {
+if (gameOver || isPaused) return;
+
+if (currentPlayer === 1) {
+blackTimeRemaining--;
+if (blackTimeRemaining <= 0) {
+gameOver = true;
+stopTimer();
+alert("黑棋時間用完！白棋獲勝！");
+updateStatus("白棋獲勝（黑棋超時）");
+return;
+}
+} else {
+whiteTimeRemaining--;
+if (whiteTimeRemaining <= 0) {
+gameOver = true;
+stopTimer();
+alert("白棋時間用完！黑棋獲勝！");
+updateStatus("黑棋獲勝（白棋超時）");
+return;
+}
+}
+updateTimerDisplay();
+}
+
+function updateTimerDisplay() {
+const blackTimeElement = document.getElementById('blackTime');
+const whiteTimeElement = document.getElementById('whiteTime');
+const blackTimerBox = document.getElementById('blackTimer');
+const whiteTimerBox = document.getElementById('whiteTimer');
+
+// 格式化時間顯示
+blackTimeElement.textContent = formatTime(blackTimeRemaining);
+whiteTimeElement.textContent = formatTime(whiteTimeRemaining);
+
+// 更新活躍狀態
+if (currentPlayer === 1) {
+blackTimerBox.classList.add('active');
+whiteTimerBox.classList.remove('active');
+} else {
+blackTimerBox.classList.remove('active');
+whiteTimerBox.classList.add('active');
+}
+
+// 時間不足警告（少於30秒時顯示紅色）
+if (blackTimeRemaining <= 30) {
+blackTimeElement.classList.add('timer-low');
+} else {
+blackTimeElement.classList.remove('timer-low');
+}
+
+if (whiteTimeRemaining <= 30) {
+whiteTimeElement.classList.add('timer-low');
+} else {
+whiteTimeElement.classList.remove('timer-low');
+}
+}
+
+function formatTime(seconds) {
+const minutes = Math.floor(seconds / 60);
+const remainingSeconds = seconds % 60;
+return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+}
+
+function addTimeBonus() {
+// 每下一子增加3秒
+if (currentPlayer === 1) {
+blackTimeRemaining += 3;
+} else {
+whiteTimeRemaining += 3;
+}
+}
+
+function generateSpiralMatrix(size) {
+let matrix = Array(size).fill().map(() => Array(size).fill(0));
+let directions = [[0, 1], [1, 0], [0, -1], [-1, 0]];
+let currentDir = 0;
+let row = Math.floor(size/2);
+let col = Math.floor(size/2);
+let steps = 1;
+let num = 1;
+while(num <= size*size) {
+for(let i = 0; i < 2; i++) {
+for(let j = 0; j < steps; j++) {
+if(num > size*size) break;
+matrix[row][col] = num++;
+row += directions[currentDir][0];
+col += directions[currentDir][1];
+}
+currentDir = (currentDir + 1) % 4;
+}
+steps++;
+}
+return matrix;
+}
+
+function createBoard() {
+const board = document.getElementById('board');
+board.innerHTML = '';
+for(let i = 0; i < BOARD_SIZE; i++) {
+const tr = document.createElement('tr');
+for(let j = 0; j < BOARD_SIZE; j++) {
+const td = document.createElement('td');
+td.textContent = numberMatrix[i][j];
+td.addEventListener('click', function() {
+const row = i;
+const col = j;
+if (isMarking) {
+this.classList.toggle('mark');
+} else {
+handleNormalClick(row, col, this);
+}
+});
+tr.appendChild(td);
+}
+board.appendChild(tr);
+}
+}
+
+function handleNormalClick(row, col, cell) {
+if (boardData[row][col] !== 0 || gameOver) return;
+if (prePlacePosition) {
+if (prePlacePosition.row === row && prePlacePosition.col === col) {
+// 檢查黑棋禁手
+if (currentPlayer === 1 && isForbiddenDetectionEnabled && isForbiddenMove(row, col)) {
+// 移除預覽
+cell.classList.remove('preview');
+prePlacePosition = null;
+// 播放爆炸聲音
+playExplosionSound();
+// 顯示爆炸特效
+showExplosionAnimation(cell);
+// 確實落子但呈現特殊樣式
+placeForbiddenStone(row, col);
+// 延遲顯示提示，讓爆炸特效先播放
+setTimeout(() => {
+alert("黑棋下了禁手！白棋獲勝！");
+gameOver = true;
+updateStatus("白棋獲勝（黑棋禁手）");
+stopTimer();
+}, 800);
+return;
+}
+placeStone(row, col);
+cell.classList.remove('preview');
+prePlacePosition = null;
+} else {
+document.querySelector(`#board tr:nth-child(${prePlacePosition.row+1}) td:nth-child(${prePlacePosition.col+1})`).classList.remove('preview');
+cell.classList.add('preview');
+prePlacePosition = {row, col};
+}
+} else {
+cell.classList.add('preview');
+prePlacePosition = {row, col};
+}
+}
+
+// 顯示爆炸動畫
+function showExplosionAnimation(targetCell) {
+// 添加閃光效果
+const flash = document.createElement('div');
+flash.className = 'explosion-flash';
+document.body.appendChild(flash);
+// 創建爆炸容器
+const container = document.createElement('div');
+container.className = 'explosion-container';
+document.body.appendChild(container);
+// 獲取目標格子的位置
+const rect = targetCell.getBoundingClientRect();
+const centerX = rect.left + rect.width / 2;
+const centerY = rect.top + rect.height / 2;
+// 添加爆炸粒子
+for (let i = 0; i < 50; i++) {
+const particle = document.createElement('div');
+particle.className = 'explosion-particle';
+// 設置粒子起始位置
+particle.style.left = `${centerX}px`;
+particle.style.top = `${centerY}px`;
+// 爆炸顏色（紅、橙、黃）
+const colors = ['#ff0000', '#ff4500', '#ffa500', '#ffff00', '#ff6600'];
+particle.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+// 設置隨機爆炸方向（更集中的爆炸效果）
+const angle = Math.random() * Math.PI * 2;
+const distance = Math.random() * 150 + 50;
+const x = Math.cos(angle) * distance;
+const y = Math.sin(angle) * distance;
+particle.style.setProperty('--x', `${x}px`);
+particle.style.setProperty('--y', `${y}px`);
+container.appendChild(particle);
+}
+// 移除動畫元素
+setTimeout(() => {
+flash.remove();
+container.remove();
+}, 1000);
+}
+
+function placeForbiddenStone(row, col) {
+// 記錄禁手棋步
+moveHistory.push({
+row: row,
+col: col,
+player: currentPlayer,
+step: stepNumber,
+forbidden: true
+});
+const cell = document.querySelector(`#board tr:nth-child(${row+1}) td:nth-child(${col+1})`);
+cell.classList.add('forbidden-stone', 'forbidden');
+const numberSpan = document.createElement('span');
+numberSpan.className = 'move-number';
+numberSpan.textContent = stepNumber;
+cell.appendChild(numberSpan);
+boardData[row][col] = currentPlayer;
+stepNumber++;
+}
+
+function placeStone(row, col) {
+if (gameOver) return;
+document.querySelector(`#board tr:nth-child(${row+1}) td:nth-child(${col+1})`).classList.remove('preview', 'forbidden');
+moveHistory.push({
+row: row,
+col: col,
+player: currentPlayer,
+step: stepNumber
+});
+const cell = document.querySelector(`#board tr:nth-child(${row+1}) td:nth-child(${col+1})`);
+cell.classList.add(currentPlayer === 1 ? 'black' : 'white');
+// 播放下棋聲音
+playMoveSound();
+const numberSpan = document.createElement('span');
+numberSpan.className = 'move-number';
+numberSpan.textContent = stepNumber;
+cell.appendChild(numberSpan);
+boardData[row][col] = currentPlayer;
+
+// 添加時間獎勵
+if (isTimerEnabled) {
+addTimeBonus();
+}
+
+// 檢查是否獲勝
+const winningPositions = checkWin(row, col);
+if (winningPositions) {
+// 高亮獲勝的棋子
+highlightWinningStones(winningPositions);
+// 播放勝利音效
+playVictorySound();
+// 顯示鞭炮動畫
+showFirecrackerAnimation();
+// 遊戲結束
+gameOver = true;
+// 停止計時器
+stopTimer();
+// 更新狀態
+updateStatus(`${currentPlayer === 1 ? '黑棋' : '白棋'}獲勝！`);
+// 顯示提示
+setTimeout(() => {
+alert(`${currentPlayer === 1 ? '黑棋' : '白棋'}獲勝！`);
+}, 300);
+return;
+}
+stepNumber++;
+currentPlayer = currentPlayer === 1 ? 2 : 1;
+updateStatus();
+updateTimerDisplay();
+// Update forbidden positions after a move
+if (isForbiddenDetectionEnabled) {
+updateForbiddenPositions();
+}
+}
+
+// 檢查獲勝條件
+function checkWin(row, col) {
+const player = boardData[row][col];
+if (player === 0) return false;
+const directions = [
+[0, 1], // horizontal
+[1, 0], // vertical
+[1, 1], // diagonal down-right
+[1, -1] // diagonal down-left
+];
+for (const [dx, dy] of directions) {
+let count = 1; // count the current stone
+let winningPositions = [[row, col]]; // store positions of winning stones
+// Check in positive direction
+let r = row + dx;
+let c = col + dy;
+while (r >= 0 && r < BOARD_SIZE && c >= 0 && c < BOARD_
